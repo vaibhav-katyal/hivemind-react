@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { getPublicProjects, saveProject, getUserById } from '@/lib/localStorage';
+import { getPublicProjects, saveProject, getUsers } from '@/lib/api';
 import { Heart, MessageCircle, Search, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,6 +29,7 @@ const Community = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [comment, setComment] = useState('');
   const [contributionMessage, setContributionMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -38,77 +39,125 @@ const Community = () => {
     loadProjects();
   }, [user, navigate]);
 
-  const loadProjects = () => {
-    const publicProjects = getPublicProjects();
-    setProjects(publicProjects);
+  const loadProjects = async () => {
+    try {
+      const [publicProjects, users] = await Promise.all([getPublicProjects(), getUsers()]);
+
+      // build a fast lookup of users
+      const usersMap = users.reduce((m, u) => ({ ...m, [u.id]: u }), {});
+
+      // Normalize projects: ensure arrays exist and attach leader info + users map
+      const projectsWithMeta = publicProjects.map(p => ({
+        ...p,
+        likedBy: Array.isArray(p.likedBy) ? p.likedBy : [],
+        comments: Array.isArray(p.comments) ? p.comments : [],
+        contributionRequests: Array.isArray(p.contributionRequests) ? p.contributionRequests : [],
+        leader: usersMap[p.leaderId] || null,
+        _usersMap: usersMap,
+      }));
+
+      setProjects(projectsWithMeta);
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!user) return null;
+  if (!user || loading) return null;
 
-  const handleLike = (project) => {
-    const hasLiked = project.likes.includes(user.id);
-    const updatedProject = {
-      ...project,
-      likes: hasLiked 
-        ? project.likes.filter(id => id !== user.id)
-        : [...project.likes, user.id]
-    };
-    saveProject(updatedProject);
-    loadProjects();
-    toast({
-      title: hasLiked ? "Like removed" : "Liked!",
-      description: hasLiked ? "Project removed from your likes" : "You liked this project",
-    });
+  const handleLike = async (project) => {
+    try {
+      const hasLiked = project.likes > 0 && project.likedBy?.includes(user.id);
+      const updatedProject = {
+        ...project,
+        likes: hasLiked ? Math.max(0, project.likes - 1) : project.likes + 1,
+        likedBy: hasLiked 
+          ? (project.likedBy || []).filter(id => id !== user.id)
+          : [...(project.likedBy || []), user.id]
+      };
+      await saveProject(updatedProject);
+      await loadProjects();
+      toast({
+        title: hasLiked ? "Like removed" : "Liked!",
+        description: hasLiked ? "Project removed from your likes" : "You liked this project",
+      });
+    } catch (error) {
+      console.error('Failed to like project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to like project",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleComment = (project) => {
+  const handleComment = async (project) => {
     if (!comment.trim()) return;
 
-    const updatedProject = {
-      ...project,
-      comments: [
-        ...project.comments,
-        {
-          id: Date.now().toString(),
-          userId: user.id,
-          content: comment.trim(),
-          createdDate: new Date().toISOString(),
-        }
-      ]
-    };
-    saveProject(updatedProject);
-    setComment('');
-    loadProjects();
-    toast({
-      title: "Comment added",
-      description: "Your comment has been posted",
-    });
+    try {
+      const updatedProject = {
+        ...project,
+        comments: [
+          ...project.comments,
+          {
+            id: Date.now().toString(),
+            userId: user.id,
+            content: comment.trim(),
+            createdDate: new Date().toISOString(),
+          }
+        ]
+      };
+      await saveProject(updatedProject);
+      setComment('');
+      await loadProjects();
+      toast({
+        title: "Comment added",
+        description: "Your comment has been posted",
+      });
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRequestContribution = (project) => {
+  const handleRequestContribution = async (project) => {
     if (!contributionMessage.trim()) return;
 
-    const updatedProject = {
-      ...project,
-      contributionRequests: [
-        ...project.contributionRequests,
-        {
-          id: Date.now().toString(),
-          userId: user.id,
-          message: contributionMessage.trim(),
-          status: 'pending',
-          createdDate: new Date().toISOString(),
-        }
-      ]
-    };
-    saveProject(updatedProject);
-    setContributionMessage('');
-    setSelectedProject(null);
-    loadProjects();
-    toast({
-      title: "Request sent!",
-      description: "The project leader will review your request",
-    });
+    try {
+      const updatedProject = {
+        ...project,
+        contributionRequests: [
+          ...project.contributionRequests,
+          {
+            id: Date.now().toString(),
+            userId: user.id,
+            message: contributionMessage.trim(),
+            status: 'pending',
+            createdDate: new Date().toISOString(),
+          }
+        ]
+      };
+      await saveProject(updatedProject);
+      setContributionMessage('');
+      setSelectedProject(null);
+      await loadProjects();
+      toast({
+        title: "Request sent!",
+        description: "The project leader will review your request",
+      });
+    } catch (error) {
+      console.error('Failed to send contribution request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send contribution request",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredProjects = searchQuery
@@ -155,13 +204,13 @@ const Community = () => {
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {filteredProjects.map((project) => {
-                const leader = getUserById(project.leaderId);
-                const hasLiked = project.likes.includes(user.id);
-                const hasRequested = project.contributionRequests.some(
+                const leader = project.leader;
+                const hasLiked = (project.likedBy || []).includes(user.id);
+                const hasRequested = (project.contributionRequests || []).some(
                   req => req.userId === user.id
                 );
                 const isTeamMember = project.leaderId === user.id || 
-                  project.teamMembers.some(tm => tm.userId === user.id);
+                  (project.teamMembers || []).some(tm => tm.userId === user.id);
 
                 return (
                   <Card key={project.id} className="hover:shadow-lg transition-shadow">
@@ -195,11 +244,11 @@ const Community = () => {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {leader?.name.charAt(0).toUpperCase()}
+                            {leader?.name ? leader.name.charAt(0).toUpperCase() : '?'}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{leader?.name}</p>
+                          <p className="text-sm font-medium">{leader?.name || 'Unknown'}</p>
                           <p className="text-xs text-muted-foreground">Project Leader</p>
                         </div>
                       </div>
@@ -213,7 +262,7 @@ const Community = () => {
                           onClick={() => handleLike(project)}
                         >
                           <Heart className={`h-4 w-4 ${hasLiked ? 'fill-current text-destructive' : ''}`} />
-                          {project.likes.length}
+                          {typeof project.likes === 'number' ? project.likes : (project.likes || 0)}
                         </Button>
 
                         <Dialog>
@@ -230,17 +279,18 @@ const Community = () => {
                             </DialogHeader>
                             <div className="space-y-4">
                               {project.comments.map((comment) => {
-                                const commenter = getUserById(comment.userId);
+                                const commenter = comment.userId ? project._usersMap?.[comment.userId] : null;
+                                const commenterName = commenter?.name || 'Unknown';
                                 return (
                                   <div key={comment.id} className="flex gap-3">
                                     <Avatar className="h-8 w-8">
                                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                        {commenter?.name.charAt(0).toUpperCase()}
+                                        {commenterName.charAt(0).toUpperCase()}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
-                                        <p className="font-medium text-sm">{commenter?.name}</p>
+                                        <p className="font-medium text-sm">{commenterName}</p>
                                         <p className="text-xs text-muted-foreground">
                                           {new Date(comment.createdDate).toLocaleDateString()}
                                         </p>

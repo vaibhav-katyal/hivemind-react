@@ -1,23 +1,38 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, logout as logoutUser } from '@/lib/localStorage';
+import { getCurrentUser, logout as logoutUser } from '@/lib/api';
 
 const AuthContext = createContext(undefined);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
+    const initUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Failed to get current user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initUser();
   }, []);
 
   const login = (user) => {
     setUser(user);
   };
 
-  const logout = () => {
-    logoutUser();
-    setUser(null);
+  const logout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    }
   };
 
   const updateUser = (updatedUser) => {
@@ -25,7 +40,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -38,3 +53,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

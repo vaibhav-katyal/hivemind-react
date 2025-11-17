@@ -1,0 +1,370 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "demo@hivemind.com",
+      "password": "demo123",
+      "name": "Demo User",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Demo",
+      "bio": "Passionate project leader and team player",
+      "points": 1250,
+      "badges": [
+        {
+          "id": "b1",
+          "name": "Team Leader",
+          "description": "Led 5 successful projects",
+          "icon": "👑",
+          "earnedDate": "2024-08-17T12:00:00.000Z"
+        },
+        {
+          "id": "b2",
+          "name": "Collaborator",
+          "description": "Worked on 10+ projects",
+          "icon": "🤝",
+          "earnedDate": "2024-08-17T12:00:00.000Z"
+        }
+      ],
+      "joinedDate": "2024-08-17T12:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "email": "john@hivemind.com",
+      "password": "john123",
+      "name": "John Developer",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+      "bio": "Full stack developer and open source enthusiast",
+      "points": 850,
+      "badges": [
+        {
+          "id": "b3",
+          "name": "Code Contributor",
+          "description": "Made 25+ contributions",
+          "icon": "💻",
+          "earnedDate": "2024-09-01T12:00:00.000Z"
+        }
+      ],
+      "joinedDate": "2024-09-01T12:00:00.000Z"
+    },
+    {
+      "email": "medanshGarg@gmail.com",
+      "password": "123",
+      "name": "jd",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=jd",
+      "bio": "",
+      "points": 0,
+      "badges": [],
+      "joinedDate": "2025-11-17T14:34:02.379Z",
+      "id": "62bo6VZ"
+    }
+  ],
+  "projects": [
+    {
+      "id": "p1",
+      "name": "HiveMind Platform",
+      "description": "A collaborative project management system for distributed teams",
+      "githubLink": "https://github.com/demo/hivemind",
+      "leaderId": "1",
+      "teamMembers": [
+        {
+          "userId": "1",
+          "role": "Lead"
+        },
+        {
+          "userId": "2",
+          "role": "Developer"
+        }
+      ],
+      "status": "in-progress",
+      "progress": 65,
+      "createdDate": "2024-08-20T10:00:00.000Z",
+      "completedDate": null,
+      "tags": [
+        "React",
+        "Node.js",
+        "Collaboration",
+        "Project Management"
+      ],
+      "isPublic": true,
+      "likes": 42,
+      "comments": [
+        {
+          "id": "1763391556301",
+          "userId": "62bo6VZ",
+          "content": "ssd",
+          "createdDate": "2025-11-17T14:59:16.301Z"
+        }
+      ],
+      "contributionRequests": [
+        {
+          "id": "1763391540084",
+          "userId": "62bo6VZ",
+          "message": "scxfdc",
+          "status": "pending",
+          "createdDate": "2025-11-17T14:59:00.084Z"
+        }
+      ],
+      "likedBy": [],
+      "leader": {
+        "id": "1",
+        "email": "demo@hivemind.com",
+        "password": "demo123",
+        "name": "Demo User",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Demo",
+        "bio": "Passionate project leader and team player",
+        "points": 1250,
+        "badges": [
+          {
+            "id": "b1",
+            "name": "Team Leader",
+            "description": "Led 5 successful projects",
+            "icon": "👑",
+            "earnedDate": "2024-08-17T12:00:00.000Z"
+          },
+          {
+            "id": "b2",
+            "name": "Collaborator",
+            "description": "Worked on 10+ projects",
+            "icon": "🤝",
+            "earnedDate": "2024-08-17T12:00:00.000Z"
+          }
+        ],
+        "joinedDate": "2024-08-17T12:00:00.000Z"
+      },
+      "_usersMap": {
+        "1": {
+          "id": "1",
+          "email": "demo@hivemind.com",
+          "password": "demo123",
+          "name": "Demo User",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Demo",
+          "bio": "Passionate project leader and team player",
+          "points": 1250,
+          "badges": [
+            {
+              "id": "b1",
+              "name": "Team Leader",
+              "description": "Led 5 successful projects",
+              "icon": "👑",
+              "earnedDate": "2024-08-17T12:00:00.000Z"
+            },
+            {
+              "id": "b2",
+              "name": "Collaborator",
+              "description": "Worked on 10+ projects",
+              "icon": "🤝",
+              "earnedDate": "2024-08-17T12:00:00.000Z"
+            }
+          ],
+          "joinedDate": "2024-08-17T12:00:00.000Z"
+        },
+        "2": {
+          "id": "2",
+          "email": "john@hivemind.com",
+          "password": "john123",
+          "name": "John Developer",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+          "bio": "Full stack developer and open source enthusiast",
+          "points": 850,
+          "badges": [
+            {
+              "id": "b3",
+              "name": "Code Contributor",
+              "description": "Made 25+ contributions",
+              "icon": "💻",
+              "earnedDate": "2024-09-01T12:00:00.000Z"
+            }
+          ],
+          "joinedDate": "2024-09-01T12:00:00.000Z"
+        },
+        "62bo6VZ": {
+          "email": "medanshGarg@gmail.com",
+          "password": "123",
+          "name": "jd",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=jd",
+          "bio": "",
+          "points": 0,
+          "badges": [],
+          "joinedDate": "2025-11-17T14:34:02.379Z",
+          "id": "62bo6VZ"
+        }
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Mobile App Dashboard",
+      "description": "Cross-platform dashboard for mobile apps",
+      "githubLink": "https://github.com/john/mobile-dashboard",
+      "leaderId": "2",
+      "teamMembers": [
+        {
+          "userId": "2",
+          "role": "Lead"
+        }
+      ],
+      "status": "planning",
+      "progress": 20,
+      "createdDate": "2024-10-15T14:30:00.000Z",
+      "completedDate": null,
+      "tags": [
+        "React Native",
+        "Mobile",
+        "Dashboard"
+      ],
+      "isPublic": false,
+      "likes": 15,
+      "comments": [],
+      "contributionRequests": []
+    },
+    {
+      "name": "react",
+      "description": "it ,s a demo project yeah",
+      "githubLink": "https://gemini.google.com/app/a9e3a730e3e2191d?hl=en-IN",
+      "leaderId": "62bo6VZ",
+      "teamMembers": [
+        {
+          "userId": "62bo6VZ",
+          "role": "Lead"
+        },
+        {
+          "userId": "2",
+          "role": "Member"
+        }
+      ],
+      "status": "planning",
+      "progress": 0,
+      "createdDate": "2025-11-17T14:34:35.461Z",
+      "completedDate": null,
+      "tags": [],
+      "isPublic": true,
+      "likes": 0,
+      "comments": [],
+      "contributionRequests": [],
+      "id": "4MXm9MT",
+      "likedBy": [],
+      "leader": {
+        "email": "medanshGarg@gmail.com",
+        "password": "123",
+        "name": "jd",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=jd",
+        "bio": "",
+        "points": 0,
+        "badges": [],
+        "joinedDate": "2025-11-17T14:34:02.379Z",
+        "id": "62bo6VZ"
+      },
+      "_usersMap": {
+        "1": {
+          "id": "1",
+          "email": "demo@hivemind.com",
+          "password": "demo123",
+          "name": "Demo User",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Demo",
+          "bio": "Passionate project leader and team player",
+          "points": 1250,
+          "badges": [
+            {
+              "id": "b1",
+              "name": "Team Leader",
+              "description": "Led 5 successful projects",
+              "icon": "👑",
+              "earnedDate": "2024-08-17T12:00:00.000Z"
+            },
+            {
+              "id": "b2",
+              "name": "Collaborator",
+              "description": "Worked on 10+ projects",
+              "icon": "🤝",
+              "earnedDate": "2024-08-17T12:00:00.000Z"
+            }
+          ],
+          "joinedDate": "2024-08-17T12:00:00.000Z"
+        },
+        "2": {
+          "id": "2",
+          "email": "john@hivemind.com",
+          "password": "john123",
+          "name": "John Developer",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+          "bio": "Full stack developer and open source enthusiast",
+          "points": 850,
+          "badges": [
+            {
+              "id": "b3",
+              "name": "Code Contributor",
+              "description": "Made 25+ contributions",
+              "icon": "💻",
+              "earnedDate": "2024-09-01T12:00:00.000Z"
+            }
+          ],
+          "joinedDate": "2024-09-01T12:00:00.000Z"
+        },
+        "62bo6VZ": {
+          "email": "medanshGarg@gmail.com",
+          "password": "123",
+          "name": "jd",
+          "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=jd",
+          "bio": "",
+          "points": 0,
+          "badges": [],
+          "joinedDate": "2025-11-17T14:34:02.379Z",
+          "id": "62bo6VZ"
+        }
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "projectId": "p1",
+      "title": "Setup database schema",
+      "description": "Design and implement the initial database schema",
+      "assignedTo": "1",
+      "status": "completed",
+      "deadline": "2024-08-25T23:59:59.000Z",
+      "createdDate": "2024-08-20T10:00:00.000Z",
+      "completedDate": "2024-08-24T15:30:00.000Z",
+      "points": 8,
+      "extensionRequests": []
+    },
+    {
+      "id": "t2",
+      "projectId": "p1",
+      "title": "Frontend UI components",
+      "description": "Build reusable UI components for the platform",
+      "assignedTo": "2",
+      "status": "in-progress",
+      "deadline": "2024-11-30T23:59:59.000Z",
+      "createdDate": "2024-08-22T09:00:00.000Z",
+      "completedDate": null,
+      "points": 13,
+      "extensionRequests": []
+    },
+    {
+      "id": "t3",
+      "projectId": "p1",
+      "title": "API integration",
+      "description": "Integrate backend APIs with frontend",
+      "assignedTo": "1",
+      "status": "in-progress",
+      "deadline": "2024-12-15T23:59:59.000Z",
+      "createdDate": "2024-09-01T11:00:00.000Z",
+      "completedDate": null,
+      "points": 21,
+      "extensionRequests": []
+    },
+    {
+      "projectId": "4MXm9MT",
+      "title": "do ht,;",
+      "description": "dfdfdf",
+      "assignedTo": "2",
+      "status": "pending",
+      "deadline": "2025-11-22",
+      "createdDate": "2025-11-17T14:56:42.698Z",
+      "completedDate": null,
+      "points": 100,
+      "extensionRequests": [],
+      "id": "A9X-au_"
+    }
+  ],
+  "currentUser": []
+}

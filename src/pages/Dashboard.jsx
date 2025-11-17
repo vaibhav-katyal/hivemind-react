@@ -1,27 +1,48 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getProjectsByUser, getTasksByUser } from '@/lib/localStorage';
+import { getProjectsByUser, getTasksByUser } from '@/lib/api';
 import { Award, Briefcase, CheckCircle, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [userProjects, setUserProjects] = useState([]);
+  const [userTasks, setUserTasks] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !loading) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      const fetchData = async () => {
+        try {
+          const projects = await getProjectsByUser(user.id);
+          const tasks = await getTasksByUser(user.id);
+          setUserProjects(projects);
+          setUserTasks(tasks);
+        } catch (error) {
+          console.error('Failed to fetch user data:', error);
+        } finally {
+          setDataLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [user]);
+
+  if (loading || dataLoading) return null;
   if (!user) return null;
 
-  const userProjects = getProjectsByUser(user.id);
-  const userTasks = getTasksByUser(user.id);
   const activeTasks = userTasks.filter(t => t.status !== 'completed');
   const completedTasks = userTasks.filter(t => t.status === 'completed');
   const activeProjects = userProjects.filter(p => p.status !== 'completed');

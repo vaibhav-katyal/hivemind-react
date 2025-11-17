@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { saveProject, getUsers } from '@/lib/localStorage';
+import { saveProject, getUsers } from '@/lib/api';
 import { X, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -36,17 +36,28 @@ const CreateProject = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [open, setOpen] = useState(false);
   const [availableUsers, setAvailableUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    const users = getUsers().filter(u => u.id !== user.id);
-    setAvailableUsers(users);
+    const fetchUsers = async () => {
+      try {
+        const users = await getUsers();
+        setAvailableUsers(users.filter(u => u.id !== user.id));
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
   }, [user, navigate]);
 
-  if (!user) return null;
+  if (!user || loading) return null;
 
   const handleAddTag = () => {
     if (currentTag && !tags.includes(currentTag)) {
@@ -76,8 +87,9 @@ const CreateProject = () => {
     ));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
 
     if (!name.trim()) {
       toast({
@@ -85,32 +97,44 @@ const CreateProject = () => {
         description: "Project name is required",
         variant: "destructive",
       });
+      setSubmitting(false);
       return;
     }
 
-    const newProject = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      description: description.trim(),
-      githubLink: githubLink.trim(),
-      leaderId: user.id,
-      teamMembers,
-      status: 'planning',
-      progress: 0,
-      createdDate: new Date().toISOString(),
-      tags,
-      isPublic: true,
-      likes: [],
-      comments: [],
-      contributionRequests: [],
-    };
+    try {
+      const newProject = {
+        name: name.trim(),
+        description: description.trim(),
+        githubLink: githubLink.trim(),
+        leaderId: user.id,
+        teamMembers: [{ userId: user.id, role: 'Lead' }, ...teamMembers],
+        status: 'planning',
+        progress: 0,
+        createdDate: new Date().toISOString(),
+        completedDate: null,
+        tags,
+        isPublic: true,
+        likes: 0,
+        comments: [],
+        contributionRequests: [],
+      };
 
-    saveProject(newProject);
-    toast({
-      title: "Success!",
-      description: "Project created successfully",
-    });
-    navigate(`/project/${newProject.id}`);
+      const createdProject = await saveProject(newProject);
+      toast({
+        title: "Success!",
+        description: "Project created successfully",
+      });
+      navigate(`/project/${createdProject.id}`);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create project. Make sure the server is running.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const selectedUsers = teamMembers.map(tm => availableUsers.find(u => u.id === tm.userId)).filter(Boolean);
@@ -253,10 +277,10 @@ const CreateProject = () => {
 
               {/* Submit */}
               <div className="flex gap-4">
-                <Button type="submit" className="flex-1 bg-gradient-primary">
-                  Create Project
+                <Button type="submit" className="flex-1 bg-gradient-primary" disabled={submitting}>
+                  {submitting ? 'Creating...' : 'Create Project'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/projects')}>
+                <Button type="button" variant="outline" onClick={() => navigate('/projects')} disabled={submitting}>
                   Cancel
                 </Button>
               </div>
