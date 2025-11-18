@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Profile = () => {
   const { userId } = useParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profileUser, setProfileUser] = useState(currentUser);
@@ -21,6 +21,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!currentUser) {
       navigate('/auth');
       return;
@@ -48,7 +50,7 @@ const Profile = () => {
     };
 
     fetchProfileData();
-  }, [userId, currentUser, navigate]);
+  }, [userId, currentUser, authLoading, navigate]);
 
   if (loading || !profileUser) return null;
 
