@@ -366,5 +366,10 @@
       "id": "A9X-au_"
     }
   ],
-  "currentUser": []
+  "currentUser": [
+    {
+      "userId": "62bo6VZ",
+      "id": 1
+    }
+  ]
 }
