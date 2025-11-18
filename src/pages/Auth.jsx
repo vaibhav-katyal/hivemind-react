@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUsers, saveUser, setCurrentUser } from '@/lib/localStorage';
+import { getUsers, saveUser, setCurrentUser } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Hexagon } from 'lucide-react';
 
@@ -14,63 +14,90 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const users = getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-      setCurrentUser(user.id);
-      login(user);
+    setLoading(true);
+    try {
+      const users = await getUsers();
+      const user = users.find(u => u.email === email && u.password === password);
+      
+      if (user) {
+        await setCurrentUser(user.id);
+        login(user);
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully logged in.",
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
-        title: "Welcome back!",
-        description: "You've successfully logged in.",
-      });
-      navigate('/dashboard');
-    } else {
-      toast({
-        title: "Login failed",
-        description: "Invalid email or password.",
+        title: "Error",
+        description: "An error occurred during login. Make sure the server is running.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    const users = getUsers();
-    
-    if (users.find(u => u.email === email)) {
+    setLoading(true);
+    try {
+      const users = await getUsers();
+      
+      if (users.find(u => u.email === email)) {
+        toast({
+          title: "Signup failed",
+          description: "An account with this email already exists.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const newUser = {
+        email,
+        password,
+        name,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+        bio: '',
+        points: 0,
+        badges: [],
+        joinedDate: new Date().toISOString(),
+      };
+
+      const createdUser = await saveUser(newUser);
+      await setCurrentUser(createdUser.id);
+      login(createdUser);
       toast({
-        title: "Signup failed",
-        description: "An account with this email already exists.",
+        title: "Welcome to HiveMind!",
+        description: "Your account has been created successfully.",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred during signup. Make sure the server is running.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      password,
-      name,
-      points: 0,
-      badges: [],
-      joinedDate: new Date().toISOString(),
-    };
-
-    saveUser(newUser);
-    setCurrentUser(newUser.id);
-    login(newUser);
-    toast({
-      title: "Welcome to HiveMind!",
-      description: "Your account has been created successfully.",
-    });
-    navigate('/dashboard');
   };
 
   return (
@@ -117,8 +144,8 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full bg-gradient-primary">
-                  Sign In
+                <Button type="submit" className="w-full bg-gradient-primary" disabled={loading}>
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
@@ -158,8 +185,8 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full bg-gradient-primary">
-                  Create Account
+                <Button type="submit" className="w-full bg-gradient-primary" disabled={loading}>
+                  {loading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
             </TabsContent>

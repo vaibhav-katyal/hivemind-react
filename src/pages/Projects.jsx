@@ -5,26 +5,50 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getProjectsByUser, getUserById } from '@/lib/localStorage';
+import { getProjectsByUser, getUsers } from '@/lib/api';
 import { Plus, Search, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Projects = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProjects, setAllProjects] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !loading) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
-  if (!user) return null;
+  useEffect(() => {
+    if (user) {
+      const fetchProjects = async () => {
+        try {
+          const [projects, users] = await Promise.all([getProjectsByUser(user.id), getUsers()]);
+          const usersMap = users.reduce((m, u) => ({ ...m, [u.id]: u }), {});
+          const projectsWithMeta = projects.map(p => ({
+            ...p,
+            leader: usersMap[p.leaderId] || null,
+            _usersMap: usersMap,
+          }));
+          setAllProjects(projectsWithMeta);
+        } catch (error) {
+          console.error('Failed to fetch projects:', error);
+        } finally {
+          setDataLoading(false);
+        }
+      };
 
-  const allProjects = getProjectsByUser(user.id);
+      fetchProjects();
+    }
+  }, [user]);
+
+  if (loading || dataLoading || !user) return null;
+
   const myProjects = allProjects.filter(p => p.leaderId === user.id);
   const collaboratingProjects = allProjects.filter(p => 
     p.leaderId !== user.id && p.teamMembers.some(tm => tm.userId === user.id)
@@ -39,7 +63,7 @@ const Projects = () => {
   };
 
   const ProjectCard = ({ project }) => {
-    const leader = getUserById(project.leaderId);
+    const leader = project.leader;
     return (
       <Card 
         className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -82,7 +106,7 @@ const Projects = () => {
             </div>
 
             <div className="text-sm text-muted-foreground">
-              Led by: <span className="font-medium text-foreground">{leader?.name}</span>
+              Led by: <span className="font-medium text-foreground">{leader?.name || 'Unknown'}</span>
             </div>
           </div>
         </CardContent>

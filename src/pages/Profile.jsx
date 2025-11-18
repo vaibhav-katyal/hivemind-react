@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { getUserById, getProjectsByUser } from '@/lib/localStorage';
+import { getUserById, getProjectsByUser } from '@/lib/api';
 import { Award, Briefcase, Calendar, Share2, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profileUser, setProfileUser] = useState(currentUser);
+  const [userProjects, setUserProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) {
@@ -24,19 +26,32 @@ const Profile = () => {
       return;
     }
 
-    if (userId && userId !== currentUser.id) {
-      const user = getUserById(userId);
-      if (user) {
-        setProfileUser(user);
+    const fetchProfileData = async () => {
+      try {
+        if (userId && userId !== currentUser.id) {
+          const user = await getUserById(userId);
+          if (user) {
+            setProfileUser(user);
+            const projects = await getProjectsByUser(user.id);
+            setUserProjects(projects);
+          }
+        } else {
+          setProfileUser(currentUser);
+          const projects = await getProjectsByUser(currentUser.id);
+          setUserProjects(projects);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile data:', error);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      setProfileUser(currentUser);
-    }
+    };
+
+    fetchProfileData();
   }, [userId, currentUser, navigate]);
 
-  if (!profileUser) return null;
+  if (loading || !profileUser) return null;
 
-  const userProjects = getProjectsByUser(profileUser.id);
   const activeProjects = userProjects.filter(p => p.status !== 'completed');
   const completedProjects = userProjects.filter(p => p.status === 'completed');
   const isOwnProfile = currentUser?.id === profileUser.id;

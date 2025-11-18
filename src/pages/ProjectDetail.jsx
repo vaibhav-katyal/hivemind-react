@@ -15,12 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import {
   getProjectById,
   saveProject,
-  getUserById,
   getTasksByProject,
   saveTask,
   getUsers,
   saveUser,
-} from '@/lib/localStorage';
+} from '@/lib/api';
 import {
   ExternalLink,
   Users,
@@ -52,9 +51,11 @@ const ProjectDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [project, setProject] = useState(getProjectById(projectId || ''));
+  const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [usersMap, setUsersMap] = useState({});
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -68,30 +69,221 @@ const ProjectDetail = () => {
       navigate('/auth');
       return;
     }
-    if (!project) {
-      navigate('/projects');
-      return;
-    }
-    loadTasks();
-  }, [user, project, navigate]);
+    
+    const fetchProjectData = async () => {
+      try {
+        if (!projectId) {
+          navigate('/projects');
+          return;
+        }
+        const proj = await getProjectById(projectId);
+        if (!proj) {
+          navigate('/projects');
+          return;
+        }
+        // fetch users and build lookup map
+        const users = await getUsers();
+        const map = users.reduce((m, u) => ({ ...m, [u.id]: u }), {});
+        setUsersMap(map);
 
-  const loadTasks = () => {
+        setProject(proj);
+        const projectTasks = await getTasksByProject(projectId);
+        setTasks(projectTasks);
+      } catch (error) {
+        console.error('Failed to fetch project:', error);
+        navigate('/projects');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjectData();
+  }, [user, projectId, navigate]);
+
+  if (loading || !project) return null;
+
+  const loadTasks = async () => {
     if (projectId) {
-      setTasks(getTasksByProject(projectId));
+      try {
+        const projectTasks = await getTasksByProject(projectId);
+        setTasks(projectTasks);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
     }
   };
 
-  if (!user || !project) return null;
-
-  const leader = getUserById(project.leaderId);
-  const isLeader = project.leaderId === user.id;
-  const isTeamMember = project.teamMembers.some(tm => tm.userId === user.id) || isLeader;
-  const teamMembers = [
+  const leader = project ? usersMap[project.leaderId] || null : null;
+  const isLeader = project && project.leaderId === user.id;
+  const isTeamMember = project && (project.teamMembers.some(tm => tm.userId === user.id) || isLeader);
+  const teamMembers = project ? [
     { userId: project.leaderId, role: 'Project Leader' },
     ...project.teamMembers,
-  ];
+  ] : [];
 
-  const handleCreateTask = () => {
+  const handleCompleteTask = async (task) => {
+    try {
+      const updatedTask = {
+        ...task,
+        status: 'completed',
+        completedDate: new Date().toISOString(),
+      };
+      await saveTask(updatedTask);
+
+      // Award points to the user (use usersMap if available)
+      const assignedUser = usersMap[task.assignedTo];
+      if (assignedUser) {
+        const updatedUser = {
+          ...assignedUser,
+          points: (assignedUser.points || 0) + task.points,
+        };
+        await saveUser(updatedUser);
+      }
+
+      // Update project progress
+      const allTasks = await getTasksByProject(project.id);
+      const completedCount = allTasks.filter(t => t.id === task.id || t.status === 'completed').length;
+      const progress = Math.round((completedCount / allTasks.length) * 100);
+      const updatedProject = { ...project, progress };
+      await saveProject(updatedProject);
+      setProject(updatedProject);
+
+      await loadTasks();
+      toast({
+        title: "Task completed!",
+        description: `${task.points} points awarded`,
+      });
+    } catch (error) {
+      console.error('Failed to complete task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete task",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRequestExtension = async (task, newDeadline, reason) => {
+    try {
+      const extensionRequest = {
+        id: Date.now().toString(),
+        requestedDate: new Date().toISOString(),
+        newDeadline,
+        reason,
+        status: 'pending',
+      };
+
+      const updatedTask = {
+        ...task,
+        extensionRequests: [...task.extensionRequests, extensionRequest],
+      };
+      await saveTask(updatedTask);
+      await loadTasks();
+      toast({
+        title: "Extension requested",
+        description: "The project leader will review your request",
+      });
+    } catch (error) {
+      console.error('Failed to request extension:', error);
+      toast({
+        title: "Error",
+        description: "Failed to request extension",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveRequest = async (requestId, type, taskId) => {
+    try {
+      if (type === 'contribution') {
+        const request = project.contributionRequests.find(r => r.id === requestId);
+        if (request) {
+          const updatedProject = {
+            ...project,
+            contributionRequests: project.contributionRequests.map(r =>
+              r.id === requestId ? { ...r, status: 'approved' } : r
+            ),
+            teamMembers: [...project.teamMembers, { userId: request.userId, role: 'Contributor' }],
+          };
+          await saveProject(updatedProject);
+          setProject(updatedProject);
+          toast({
+            title: "Request approved",
+            description: "User has been added to the team",
+          });
+        }
+      } else if (taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          const request = task.extensionRequests.find(r => r.id === requestId);
+          if (request) {
+            const updatedTask = {
+              ...task,
+              deadline: request.newDeadline,
+              extensionRequests: task.extensionRequests.map(r =>
+                r.id === requestId ? { ...r, status: 'approved' } : r
+              ),
+            };
+            await saveTask(updatedTask);
+            await loadTasks();
+            toast({
+              title: "Extension approved",
+              description: "Task deadline has been updated",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requestId, type, taskId) => {
+    try {
+      if (type === 'contribution') {
+        const updatedProject = {
+          ...project,
+          contributionRequests: project.contributionRequests.map(r =>
+            r.id === requestId ? { ...r, status: 'rejected' } : r
+          ),
+        };
+        await saveProject(updatedProject);
+        setProject(updatedProject);
+        toast({
+          title: "Request rejected",
+        });
+      } else if (taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          const updatedTask = {
+            ...task,
+            extensionRequests: task.extensionRequests.map(r =>
+              r.id === requestId ? { ...r, status: 'rejected' } : r
+            ),
+          };
+          await saveTask(updatedTask);
+          await loadTasks();
+          toast({
+            title: "Request rejected",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateTask = async () => {
     if (!newTask.title.trim() || !newTask.assignedTo) {
       toast({
         title: "Error",
@@ -101,158 +293,41 @@ const ProjectDetail = () => {
       return;
     }
 
-    const task = {
-      id: Date.now().toString(),
-      projectId: project.id,
-      title: newTask.title.trim(),
-      description: newTask.description.trim(),
-      assignedTo: newTask.assignedTo,
-      status: 'pending',
-      deadline: newTask.deadline,
-      createdDate: new Date().toISOString(),
-      points: newTask.points,
-      extensionRequests: [],
-    };
-
-    saveTask(task);
-    setTaskDialogOpen(false);
-    setNewTask({
-      title: '',
-      description: '',
-      assignedTo: '',
-      deadline: '',
-      points: 10,
-    });
-    loadTasks();
-    toast({
-      title: "Task created",
-      description: "The task has been assigned successfully",
-    });
-  };
-
-  const handleCompleteTask = (task) => {
-    const updatedTask = {
-      ...task,
-      status: 'completed',
-      completedDate: new Date().toISOString(),
-    };
-    saveTask(updatedTask);
-
-    // Award points to the user
-    const assignedUser = getUserById(task.assignedTo);
-    if (assignedUser) {
-      const updatedUser = {
-        ...assignedUser,
-        points: assignedUser.points + task.points,
+    try {
+      const task = {
+        projectId: project.id,
+        title: newTask.title.trim(),
+        description: newTask.description.trim(),
+        assignedTo: newTask.assignedTo,
+        status: 'pending',
+        deadline: newTask.deadline,
+        createdDate: new Date().toISOString(),
+        completedDate: null,
+        points: newTask.points,
+        extensionRequests: [],
       };
-      saveUser(updatedUser);
-    }
 
-    // Update project progress
-    const allTasks = getTasksByProject(project.id);
-    const completedCount = allTasks.filter(t => t.id === task.id || t.status === 'completed').length;
-    const progress = Math.round((completedCount / allTasks.length) * 100);
-    const updatedProject = { ...project, progress };
-    saveProject(updatedProject);
-    setProject(updatedProject);
-
-    loadTasks();
-    toast({
-      title: "Task completed!",
-      description: `${task.points} points awarded`,
-    });
-  };
-
-  const handleRequestExtension = (task, newDeadline, reason) => {
-    const extensionRequest = {
-      id: Date.now().toString(),
-      requestedDate: new Date().toISOString(),
-      newDeadline,
-      reason,
-      status: 'pending',
-    };
-
-    const updatedTask = {
-      ...task,
-      extensionRequests: [...task.extensionRequests, extensionRequest],
-    };
-    saveTask(updatedTask);
-    loadTasks();
-    toast({
-      title: "Extension requested",
-      description: "The project leader will review your request",
-    });
-  };
-
-  const handleApproveRequest = (requestId, type, taskId) => {
-    if (type === 'contribution') {
-      const request = project.contributionRequests.find(r => r.id === requestId);
-      if (request) {
-        const updatedProject = {
-          ...project,
-          contributionRequests: project.contributionRequests.map(r =>
-            r.id === requestId ? { ...r, status: 'approved' } : r
-          ),
-          teamMembers: [...project.teamMembers, { userId: request.userId, role: 'Contributor' }],
-        };
-        saveProject(updatedProject);
-        setProject(updatedProject);
-        toast({
-          title: "Request approved",
-          description: "User has been added to the team",
-        });
-      }
-    } else if (taskId) {
-      const task = tasks.find(t => t.id === taskId);
-      if (task) {
-        const request = task.extensionRequests.find(r => r.id === requestId);
-        if (request) {
-          const updatedTask = {
-            ...task,
-            deadline: request.newDeadline,
-            extensionRequests: task.extensionRequests.map(r =>
-              r.id === requestId ? { ...r, status: 'approved' } : r
-            ),
-          };
-          saveTask(updatedTask);
-          loadTasks();
-          toast({
-            title: "Extension approved",
-            description: "Task deadline has been updated",
-          });
-        }
-      }
-    }
-  };
-
-  const handleRejectRequest = (requestId, type, taskId) => {
-    if (type === 'contribution') {
-      const updatedProject = {
-        ...project,
-        contributionRequests: project.contributionRequests.map(r =>
-          r.id === requestId ? { ...r, status: 'rejected' } : r
-        ),
-      };
-      saveProject(updatedProject);
-      setProject(updatedProject);
-      toast({
-        title: "Request rejected",
+      await saveTask(task);
+      setTaskDialogOpen(false);
+      setNewTask({
+        title: '',
+        description: '',
+        assignedTo: '',
+        deadline: '',
+        points: 10,
       });
-    } else if (taskId) {
-      const task = tasks.find(t => t.id === taskId);
-      if (task) {
-        const updatedTask = {
-          ...task,
-          extensionRequests: task.extensionRequests.map(r =>
-            r.id === requestId ? { ...r, status: 'rejected' } : r
-          ),
-        };
-        saveTask(updatedTask);
-        loadTasks();
-        toast({
-          title: "Extension rejected",
-        });
-      }
+      await loadTasks();
+      toast({
+        title: "Task created",
+        description: "The task has been assigned successfully",
+      });
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create task",
+        variant: "destructive",
+      });
     }
   };
 
@@ -336,17 +411,17 @@ const ProjectDetail = () => {
               <CardContent>
                 <div className="space-y-3">
                   {pendingContributions.map((request) => {
-                    const requester = getUserById(request.userId);
+                    const requester = usersMap[request.userId];
                     return (
                       <div key={request.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-background">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarFallback className="bg-primary text-primary-foreground">
-                              {requester?.name.charAt(0).toUpperCase()}
+                              {requester?.name ? requester.name.charAt(0).toUpperCase() : '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{requester?.name}</p>
+                            <p className="font-medium">{requester?.name || 'Unknown'}</p>
                             <p className="text-sm text-muted-foreground">{request.message}</p>
                             <Link 
                               to={`/profile/${request.userId}`}
@@ -437,10 +512,10 @@ const ProjectDetail = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 {teamMembers.map((member) => {
-                                  const memberUser = getUserById(member.userId);
+                                  const memberUser = usersMap[member.userId];
                                   return (
                                     <SelectItem key={member.userId} value={member.userId}>
-                                      {memberUser?.name} ({member.role})
+                                      {memberUser?.name || 'Unknown'} ({member.role})
                                     </SelectItem>
                                   );
                                 })}
@@ -488,7 +563,7 @@ const ProjectDetail = () => {
                   ) : (
                     <div className="space-y-4">
                       {tasks.map((task) => {
-                        const assignee = getUserById(task.assignedTo);
+                        const assignee = usersMap[task.assignedTo];
                         const isAssignedToMe = task.assignedTo === user.id;
                         const pendingExtensions = task.extensionRequests.filter(r => r.status === 'pending');
                         
@@ -576,7 +651,7 @@ const ProjectDetail = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {teamMembers.map((member) => {
-                      const memberUser = getUserById(member.userId);
+                      const memberUser = usersMap[member.userId];
                       if (!memberUser) return null;
                       
                       return (

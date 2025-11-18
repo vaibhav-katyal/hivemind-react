@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "./contexts/AuthContext";
-import { initializeDemoData } from "./lib/localStorage";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -15,9 +14,6 @@ import CreateProject from "./pages/CreateProject";
 import ProjectDetail from "./pages/ProjectDetail";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
-
-// Initialize demo data
-initializeDemoData();
 
 const queryClient = new QueryClient();
 
