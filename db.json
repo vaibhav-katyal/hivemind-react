@@ -310,6 +310,35 @@
           "id": "62bo6VZ"
         }
       }
+    },
+    {
+      "name": "DEMO-2",
+      "description": "it is a demo project",
+      "githubLink": "https://gihub.com",
+      "leaderId": "62bo6VZ",
+      "teamMembers": [
+        {
+          "userId": "62bo6VZ",
+          "role": "Lead"
+        },
+        {
+          "userId": "2",
+          "role": "Member"
+        }
+      ],
+      "status": "planning",
+      "progress": 0,
+      "createdDate": "2025-11-18T06:17:10.523Z",
+      "completedDate": null,
+      "tags": [
+        "web",
+        "react"
+      ],
+      "isPublic": true,
+      "likes": 0,
+      "comments": [],
+      "contributionRequests": [],
+      "id": "598sDSo"
     }
   ],
   "tasks": [

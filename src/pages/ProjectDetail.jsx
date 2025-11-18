@@ -116,10 +116,7 @@ const ProjectDetail = () => {
   const leader = project ? usersMap[project.leaderId] || null : null;
   const isLeader = project && project.leaderId === user.id;
   const isTeamMember = project && (project.teamMembers.some(tm => tm.userId === user.id) || isLeader);
-  const teamMembers = project ? [
-    { userId: project.leaderId, role: 'Project Leader' },
-    ...project.teamMembers,
-  ] : [];
+  const teamMembers = project ? project.teamMembers.filter(tm => tm.userId !== project.leaderId) : [];
 
   const handleCompleteTask = async (task) => {
     try {
@@ -650,6 +647,35 @@ const ProjectDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    {/* Project Leader */}
+                    {leader && (
+                      <div className="flex items-center justify-between p-4 border border-accent/50 rounded-lg bg-accent/5 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {leader.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{leader.name}</p>
+                            <p className="text-sm text-muted-foreground">Project Leader</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-accent">{leader.points} points</span>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                {leader.badges.length} badges
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <Link to={`/profile/${leader.id}`}>
+                          <Button variant="outline" size="sm">
+                            View Profile
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                    {/* Team Members */}
                     {teamMembers.map((member) => {
                       const memberUser = usersMap[member.userId];
                       if (!memberUser) return null;
